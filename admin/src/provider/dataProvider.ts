@@ -76,6 +76,24 @@ export const dataProvider: DataProvider = {
       return contactMessageProvider.getList(params);
     }
 
+    // 🧩 INVITATIONS — backend GET /roles/invitations
+    if (resource === "roles/invitations" || resource === "roles/invite") {
+      const pagination: any = (params as any).pagination ?? {};
+      const { current, pageSize } = getPaginationFromUrl(pagination);
+
+      const res = await axiosAdmin.get(`/roles/invitations`, {
+        params: { page: current - 1, size: pageSize },
+      });
+
+      const wrapped = res.data;
+      const page = wrapped.data ?? wrapped;
+
+      return {
+        data: page.content ?? page,
+        total: page.totalElements ?? page.length ?? 0,
+      };
+    }
+
     // 🧩 ROLES — backend GET /roles
     if (resource === "roles") {
       const pagination: any = (params as any).pagination ?? {};
@@ -229,6 +247,13 @@ export const dataProvider: DataProvider = {
     if (resource === "contact-messages") {
       // Contact messages are created by users, not admins
       throw new Error("Create contact message is not supported from admin");
+    }
+
+    // 🧩 INVITE STAFF — backend POST /roles/invite
+    if (resource === "roles/invite") {
+      const res = await axiosAdmin.post(`/roles/invite`, params.variables);
+      const wrapped = res.data;
+      return { data: wrapped.data ?? wrapped };
     }
 
     if (resource === "roles") {

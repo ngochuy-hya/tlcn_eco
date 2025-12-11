@@ -42,5 +42,6 @@ public class Category {
     private String description;
 
     @OneToMany(mappedBy = "category")
+    @JsonIgnore
     private java.util.Set<ProductCategory> productCategories;
 }

@@ -21,6 +21,7 @@ import com.tlcn.fashion_api.repository.product.ProductVariantRepository;
 import com.tlcn.fashion_api.repository.product.VariantAttributeValueRepository;
 import com.tlcn.fashion_api.repository.user.UserRepository;
 import com.tlcn.fashion_api.service.coupon.CouponService;
+import com.tlcn.fashion_api.service.email.EmailService;
 import com.tlcn.fashion_api.service.inventory.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -53,6 +54,7 @@ public class OrderService {
     private final InventoryService inventoryService;
     private final RefundRepository refundRepository;
     private final CouponService couponService;
+    private final EmailService emailService;
     private final ObjectMapper objectMapper;
 
     // ========== 1. LIST tất cả đơn ==========
@@ -450,6 +452,26 @@ public class OrderService {
                     System.err.println("Failed to remove coupon usage for order " + order.getId() + ": " + e.getMessage());
                 }
             }
+            
+            // 📧 Gửi email thông báo hủy đơn (chưa thanh toán)
+            try {
+                if (order.getUserId() != null) {
+                    userRepository.findById(order.getUserId()).ifPresent(customer -> {
+                        if (customer.getEmail() != null) {
+                            emailService.sendOrderCancelledEmail(
+                                    customer.getEmail(),
+                                    customer.getName() != null ? customer.getName() : "Khách hàng",
+                                    order.getOrderCode(),
+                                    order.getCancelReason(),
+                                    BigDecimal.ZERO // Chưa thanh toán nên refund = 0
+                            );
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to send order cancelled email: " + e.getMessage());
+            }
+            
             return;
         }
 
@@ -478,6 +500,30 @@ public class OrderService {
             );
 
             orderRepository.save(order);
+            
+            // 📧 Gửi email yêu cầu thông tin hoàn tiền
+            try {
+                if (order.getUserId() != null) {
+                    userRepository.findById(order.getUserId()).ifPresent(customer -> {
+                        if (customer.getEmail() != null) {
+                            BigDecimal refundAmount = order.getGrandTotal() != null 
+                                    ? order.getGrandTotal() 
+                                    : BigDecimal.ZERO;
+                            
+                            emailService.sendOrderCancelledRefundInfoRequiredEmail(
+                                    customer.getEmail(),
+                                    customer.getName() != null ? customer.getName() : "Khách hàng",
+                                    order.getOrderCode(),
+                                    order.getCancelReason(),
+                                    refundAmount
+                            );
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to send refund info required email: " + e.getMessage());
+            }
+            
             // Không restock ở đây – RefundChecker restock sau khi refund DONE
             return;
         }

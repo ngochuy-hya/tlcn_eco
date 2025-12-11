@@ -351,13 +351,22 @@ public class StatisticsServiceImpl implements StatisticsService {
                     .mapToLong(s -> s.getQuantity() != null ? s.getQuantity() : 0L)
                     .sum();
 
-            Integer safetyStock = variantStocks.isEmpty()
-                    ? 0
-                    : (variantStocks.get(0).getSafetyStock() != null ? variantStocks.get(0).getSafetyStock() : 0);
+            Stock firstStock = variantStocks.isEmpty() ? null : variantStocks.get(0);
+            Integer safetyStock = firstStock != null && firstStock.getSafetyStock() != null 
+                    ? firstStock.getSafetyStock() 
+                    : 0;
+            
+            // Check if safety stock warning is disabled for this variant
+            Boolean disableSafetyWarning = firstStock != null && firstStock.getDisableSafetyWarning() != null 
+                    ? firstStock.getDisableSafetyWarning() 
+                    : false;
 
+            // Always count out of stock variants
             if (availableQty <= 0) {
                 outOfStockVariants++;
-            } else if (availableQty <= safetyStock) {
+            } 
+            // Only count low stock if warning is not disabled
+            else if (!disableSafetyWarning && availableQty <= safetyStock) {
                 lowStockVariants++;
             }
 

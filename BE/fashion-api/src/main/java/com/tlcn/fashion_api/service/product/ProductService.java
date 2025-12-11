@@ -186,7 +186,9 @@ public class ProductService {
         if (categories != null && !categories.isEmpty()) {
             spec = spec.and((root, query, cb) -> {
                 query.distinct(true);
-                Join<Product, Category> categoryJoin = root.join("categories", JoinType.LEFT);
+                // Join qua bảng trung gian ProductCategory
+                Join<Product, ProductCategory> pcJoin = root.join("productCategories", JoinType.INNER);
+                Join<ProductCategory, Category> categoryJoin = pcJoin.join("category", JoinType.INNER);
                 return categoryJoin.get("slug").in(categories);
             });
         }
@@ -634,7 +636,9 @@ public class ProductService {
         if (request.getCategories() != null && !request.getCategories().isEmpty()) {
             spec = spec.and((root, query, cb) -> {
                 query.distinct(true);
-                Join<Product, Category> categoryJoin = root.join("categories", JoinType.LEFT);
+                // Join qua bảng trung gian ProductCategory
+                Join<Product, ProductCategory> pcJoin = root.join("productCategories", JoinType.INNER);
+                Join<ProductCategory, Category> categoryJoin = pcJoin.join("category", JoinType.INNER);
                 return cb.or(
                         categoryJoin.get("slug").in(request.getCategories()),
                         categoryJoin.get("name").in(request.getCategories())

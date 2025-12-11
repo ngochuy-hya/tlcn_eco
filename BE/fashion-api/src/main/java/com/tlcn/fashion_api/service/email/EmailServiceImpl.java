@@ -12,7 +12,10 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
+import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -60,7 +63,7 @@ public class EmailServiceImpl implements EmailService {
         variables.put("customMessage", customMessage);
         variables.put("shopName", fromName);
         
-        sendEmail(to, "You're invited to join " + fromName, "invitation-email", variables);
+        sendEmail(to, "Lời mời tham gia đội ngũ " + fromName, "invitation-email", variables);
     }
     
     @Override
@@ -82,6 +85,59 @@ public class EmailServiceImpl implements EmailService {
         variables.put("shopName", fromName);
         
         sendEmail(to, "Welcome to " + fromName, "welcome-email", variables);
+    }
+    
+    @Override
+    @Async
+    public void sendOrderCancelledEmail(String to, String customerName, String orderCode, 
+                                       String cancelReason, BigDecimal refundAmount) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("customerName", customerName);
+        variables.put("orderCode", orderCode);
+        variables.put("cancelReason", cancelReason != null ? cancelReason : "Không có lý do cụ thể");
+        variables.put("refundAmount", formatCurrency(refundAmount));
+        variables.put("shopName", fromName);
+        variables.put("supportEmail", fromAddress);
+        
+        sendEmail(to, "Đơn hàng #" + orderCode + " đã bị hủy", "order-cancelled-email", variables);
+    }
+    
+    @Override
+    @Async
+    public void sendOrderCancelledRefundInfoRequiredEmail(String to, String customerName, 
+                                                          String orderCode, String cancelReason, 
+                                                          BigDecimal refundAmount) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("customerName", customerName);
+        variables.put("orderCode", orderCode);
+        variables.put("cancelReason", cancelReason != null ? cancelReason : "Không có lý do cụ thể");
+        variables.put("refundAmount", formatCurrency(refundAmount));
+        variables.put("shopName", fromName);
+        variables.put("supportEmail", fromAddress);
+        
+        sendEmail(to, "Đơn hàng #" + orderCode + " đã hủy - Cần thông tin hoàn tiền", 
+                 "order-cancelled-refund-info-email", variables);
+    }
+    
+    @Override
+    @Async
+    public void sendInvitationReminderEmail(String to, String inviterName, String token, 
+                                           Set<String> roleNames, int daysLeft) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("inviterName", inviterName);
+        variables.put("roles", roleNames);
+        variables.put("invitationUrl", invitationBaseUrl + "?token=" + token);
+        variables.put("daysLeft", daysLeft);
+        variables.put("shopName", fromName);
+        
+        sendEmail(to, "Nhắc nhở: Lời mời tham gia " + fromName + " sắp hết hạn", 
+                 "invitation-reminder-email", variables);
+    }
+    
+    private String formatCurrency(BigDecimal amount) {
+        if (amount == null) return "0 ₫";
+        NumberFormat formatter = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("vi-VN"));
+        return formatter.format(amount);
     }
     
     @Override

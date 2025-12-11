@@ -30,7 +30,7 @@ export default function Products({
   // Đọc category & brand từ query string (?category=slug&brand=Brand+Name)
   const [searchParams] = useSearchParams();
   const categorySlug = searchParams.get("category");
-  const brandFromQuery = searchParams.get("brand");
+  const brandFromQuery = searchParams.get("brand") ? decodeURIComponent(searchParams.get("brand")!) : null;
 
   // FILTER từ BE
   const [filters, setFilters] = useState<FilterResponse | null>(null);

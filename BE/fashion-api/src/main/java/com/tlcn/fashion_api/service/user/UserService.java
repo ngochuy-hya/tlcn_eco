@@ -1,6 +1,7 @@
 package com.tlcn.fashion_api.service.user;
 
 import com.tlcn.fashion_api.common.enums.UserStatus;
+import com.tlcn.fashion_api.common.enums.VerificationType;
 import com.tlcn.fashion_api.common.exception.BadRequestException;
 import com.tlcn.fashion_api.common.exception.ResourceNotFoundException;
 import com.tlcn.fashion_api.dto.auth.ChangePasswordRequest;
@@ -8,9 +9,11 @@ import com.tlcn.fashion_api.dto.user.*;
 import com.tlcn.fashion_api.entity.user.Role;
 import com.tlcn.fashion_api.entity.user.User;
 import com.tlcn.fashion_api.entity.user.UserRole;
+import com.tlcn.fashion_api.entity.user.VerificationCode;
 import com.tlcn.fashion_api.mapper.UserMapper;
 import com.tlcn.fashion_api.repository.user.*;
 import com.tlcn.fashion_api.security.SecurityUtils;
+import com.tlcn.fashion_api.service.email.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -19,8 +22,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 @Service
@@ -37,6 +42,8 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final EmailService emailService;
+    private final VerificationCodeRepository verificationCodeRepository;
 
     private static final List<String> STAFF_ROLE_CODES = List.of(
             "ADMIN",
@@ -95,6 +102,25 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
 
         if (request.getName() != null) user.setName(request.getName());
+        
+        // Handle email change - require re-verification
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new BadRequestException("Email already exists");
+            }
+            
+            // Update email and reset verification status
+            user.setEmail(request.getEmail());
+            user.setEmailVerifiedAt(null);
+            user.setStatus(UserStatus.PENDING);
+            
+            // Generate and send verification code
+            String code = generateVerificationCode();
+            saveVerificationCode(user.getEmail(), code);
+            emailService.sendVerificationEmail(user.getEmail(), user.getName(), code);
+            
+            log.info("Email changed for user: {}. Verification required.", user.getEmail());
+        }
 
         if (request.getUsername() != null) {
             if (!request.getUsername().equals(user.getUsername()) &&
@@ -199,6 +225,30 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
 
         if (request.getName() != null) user.setName(request.getName());
+        
+        // Handle email change - require re-verification
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new BadRequestException("Email already exists");
+            }
+            
+            // Update email and reset verification status
+            user.setEmail(request.getEmail());
+            user.setEmailVerifiedAt(null);
+            user.setStatus(UserStatus.PENDING);
+            
+            // Revoke all tokens to force re-login after email verification
+            accessTokenRepository.revokeAllUserTokens(currentUserId, LocalDateTime.now());
+            refreshTokenRepository.revokeAllUserTokens(currentUserId, LocalDateTime.now());
+            
+            // Generate and send verification code
+            String code = generateVerificationCode();
+            saveVerificationCode(user.getEmail(), code);
+            emailService.sendVerificationEmail(user.getEmail(), user.getName(), code);
+            
+            log.info("Email changed for user: {}. Verification required.", user.getEmail());
+        }
+        
         if (request.getUsername() != null) {
             if (!request.getUsername().equals(user.getUsername()) &&
                     userRepository.existsByUsername(request.getUsername())) {
@@ -316,5 +366,22 @@ public class UserService {
                     .build();
             userRoleRepository.save(userRole);
         }
+    }
+    
+    // Helper methods for email verification
+    private String generateVerificationCode() {
+        Random random = new Random();
+        int code = 100000 + random.nextInt(900000); // 6-digit code
+        return String.valueOf(code);
+    }
+    
+    private void saveVerificationCode(String email, String code) {
+        VerificationCode verificationCode = VerificationCode.builder()
+                .identifier(email)
+                .code(code)
+                .type(VerificationType.EMAIL_VERIFICATION)
+                .expiresAt(LocalDateTime.now().plus(Duration.ofMinutes(15))) // 15 minutes expiration
+                .build();
+        verificationCodeRepository.save(verificationCode);
     }
 }

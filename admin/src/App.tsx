@@ -48,6 +48,9 @@ import { UserEdit } from "./pages/users/edit";
 import { UserShow } from "./pages/users/show";
 import { UserCreate } from "./pages/users/create";
 import { UserAssignRoles } from "./pages/users/assignRoles";
+// TODO: Enable invitation feature later
+// import { UserInvite } from "./pages/users/invite";
+// import { InvitationList } from "./pages/users/invitations";
 import { BrandList } from "./pages/brand/list";
 import { BrandCreate } from "./pages/brand/create";
 import { BrandEdit } from "./pages/brand/edit";
@@ -228,6 +231,17 @@ function App() {
                         icon: <i className="fa-solid fa-users" />,
                       },
                     },
+                    // TODO: Enable invitation feature later
+                    // {
+                    //   name: "roles/invite",
+                    //   list: "/users/invitations",
+                    //   create: "/users/invite",
+                    //   meta: {
+                    //     label: "Mời nhân viên",
+                    //     parent: "users",
+                    //     icon: <i className="fa-solid fa-user-plus" />,
+                    //   },
+                    // },
                     {
                       name: "chats",
                       list: "/chats",
@@ -296,6 +310,9 @@ function App() {
                           path="assign-roles/:id"
                           element={<UserAssignRoles />}
                         />
+                        {/* TODO: Enable invitation routes later */}
+                        {/* <Route path="invite" element={<UserInvite />} /> */}
+                        {/* <Route path="invitations" element={<InvitationList />} /> */}
                       </Route>
                     </Route>
 

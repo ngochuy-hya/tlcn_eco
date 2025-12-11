@@ -24,6 +24,11 @@ public class Stock {
 
     @Column(name = "safety_stock", nullable = false)
     private Integer safetyStock;
+    
+    @Builder.Default
+    @Column(name = "disable_safety_warning")
+    private Boolean disableSafetyWarning = false;
+    
     @Column(name = "location")
     private String location;
 

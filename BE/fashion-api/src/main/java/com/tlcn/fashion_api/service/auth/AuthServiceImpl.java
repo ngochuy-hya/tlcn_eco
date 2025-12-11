@@ -74,12 +74,12 @@ public class AuthServiceImpl implements AuthService {
     public UserDto register(RegisterRequest request) {
         // Validate password confirmation
         if (!request.getPassword().equals(request.getPasswordConfirm())) {
-            throw new BadRequestException("Password confirmation does not match");
+            throw new BadRequestException("Xác nhận mật khẩu không khớp");
         }
 
         // Check email uniqueness
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email already exists");
+            throw new BadRequestException("Email đã tồn tại");
         }
 
         // Create user with PENDING status
@@ -117,7 +117,7 @@ public class AuthServiceImpl implements AuthService {
     public LoginResponse login(LoginRequest request) {
         // Find user by email or username - always get fresh data from database
         User user = userRepository.findByEmailOrUsername(request.getIdentifier(), request.getIdentifier())
-                .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
+                .orElseThrow(() -> new UnauthorizedException("Thông tin đăng nhập không hợp lệ"));
 
         // Auto-unlock account if lock duration has expired
         if (user.getStatus() == UserStatus.LOCKED && user.getLockedUntil() != null) {
@@ -150,21 +150,28 @@ public class AuthServiceImpl implements AuthService {
             log.info("Account unlocked (status was LOCKED but lock duration expired): {}", user.getEmail());
         }
 
-        // Check if email is verified (for customers)
-        if (!user.isEmailVerified() && user.getStatus() == UserStatus.PENDING) {
+        // Check if email is verified (for all users except invited staff)
+        // Invited staff users are auto-verified when they accept invitation
+        if (!user.isEmailVerified()) {
             recordLoginHistory(user, LoginMethod.EMAIL, LoginStatus.FAILED, "Email not verified");
-            throw new UnauthorizedException("Please verify your email before logging in");
+            throw new UnauthorizedException("Vui lòng xác thực email trước khi đăng nhập");
+        }
+        
+        // Also check if status is PENDING - they should verify email first
+        if (user.getStatus() == UserStatus.PENDING) {
+            recordLoginHistory(user, LoginMethod.EMAIL, LoginStatus.FAILED, "Account pending verification");
+            throw new UnauthorizedException("Vui lòng xác thực email trước khi đăng nhập");
         }
 
         // Check user status
         if (user.getStatus() == UserStatus.SUSPENDED) {
             recordLoginHistory(user, LoginMethod.EMAIL, LoginStatus.FAILED, "Account suspended");
-            throw new UnauthorizedException("Account is suspended");
+            throw new UnauthorizedException("Tài khoản đã bị tạm khóa");
         }
 
         if (user.getStatus() == UserStatus.INACTIVE) {
             recordLoginHistory(user, LoginMethod.EMAIL, LoginStatus.FAILED, "Account inactive");
-            throw new UnauthorizedException("Account is inactive");
+            throw new UnauthorizedException("Tài khoản không hoạt động");
         }
 
         // Verify password
@@ -263,15 +270,15 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public TokenResponse refreshToken(RefreshTokenRequest request) {
         if (!jwtService.validateToken(request.getRefreshToken())) {
-            throw new UnauthorizedException("Invalid refresh token");
+            throw new UnauthorizedException("Token làm mới không hợp lệ");
         }
 
         String tokenHash = hashToken(request.getRefreshToken());
         RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() -> new UnauthorizedException("Refresh token not found"));
+                .orElseThrow(() -> new UnauthorizedException("Không tìm thấy token làm mới"));
 
         if (!refreshToken.isValid()) {
-            throw new UnauthorizedException("Refresh token is invalid or expired");
+            throw new UnauthorizedException("Token làm mới không hợp lệ hoặc đã hết hạn");
         }
 
         // Get user
@@ -327,7 +334,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (user.isEmailVerified()) {
-            throw new BadRequestException("Email is already verified");
+            throw new BadRequestException("Email đã được xác thực");
         }
 
         // Generate and send new code
@@ -355,7 +362,7 @@ public class AuthServiceImpl implements AuthService {
     public void resetPassword(ResetPasswordRequest request) {
         // Validate password confirmation
         if (!request.getNewPassword().equals(request.getNewPasswordConfirm())) {
-            throw new BadRequestException("Password confirmation does not match");
+            throw new BadRequestException("Xác nhận mật khẩu không khớp");
         }
 
         // Validate reset code
@@ -389,12 +396,12 @@ public class AuthServiceImpl implements AuthService {
 
         // Verify current password
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            throw new BadRequestException("Current password is incorrect");
+            throw new BadRequestException("Mật khẩu hiện tại không đúng");
         }
 
         // Validate password confirmation
         if (!request.getNewPassword().equals(request.getNewPasswordConfirm())) {
-            throw new BadRequestException("Password confirmation does not match");
+            throw new BadRequestException("Xác nhận mật khẩu không khớp");
         }
 
         // Update password
