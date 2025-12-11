@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Invitation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            color: #2196F3;
+        }
+        .button {
+            display: inline-block;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .roles-list {
+            background-color: #fff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header">You're Invited to Join Our Team!</h1>
+        
+        <p>Hello,</p>
+        
+        <p><strong th:text="${inviterName}">Admin</strong> has invited you to join Fashion Shop as a staff member.</p>
+        
+        <div class="roles-list">
+            <strong>Your assigned roles:</strong>
+            <ul>
+                <li th:each="role : ${roles}" th:text="${role}">Role Name</li>
+            </ul>
+        </div>
+        
+        <p>Click the button below to accept the invitation and set up your account:</p>
+        
+        <div style="text-align: center;">
+            <a th:href="${invitationUrl}" class="button">Accept Invitation</a>
+        </div>
+        
+        <p>Or copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #2196F3;" th:text="${invitationUrl}">URL</p>
+        
+        <p><strong>Note:</strong> This invitation will expire in 24 hours.</p>
+        
+        <p>If you didn't expect this invitation, please ignore this email.</p>
+        
+        <div class="footer">
+            <p>&copy; 2024 Fashion Shop. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+
