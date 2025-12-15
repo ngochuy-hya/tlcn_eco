@@ -59,6 +59,13 @@ export const OrderShow = () => {
   const { data, isLoading } = query;
   const record = data?.data;
 
+  const showPayosQr =
+    record &&
+    record.paymentMethod?.toUpperCase() === "PAYOS" &&
+    record.paymentStatus?.toLowerCase() !== "paid" &&
+    record.status?.toLowerCase() !== "done" &&
+    !!record.payosQrUrl;
+
   return (
     <Show isLoading={isLoading} title={`Order Detail`}>
       {record && (
@@ -89,6 +96,15 @@ export const OrderShow = () => {
             <Descriptions.Item label="Payment Method">
               {renderPaymentMethod(record.paymentMethod)}
             </Descriptions.Item>
+            {showPayosQr && (
+              <Descriptions.Item label="QR thanh toán" span={2}>
+                <img
+                  src={record.payosQrUrl!}
+                  alt="PayOS QR"
+                  style={{ width: 220, height: "auto", border: "1px solid #eee" }}
+                />
+              </Descriptions.Item>
+            )}
             <Descriptions.Item label="Subtotal">
               {formatMoney(record.subtotal)}
             </Descriptions.Item>
@@ -202,6 +218,21 @@ export const OrderShow = () => {
                   ? new Date(record.refundRequestedAt).toLocaleString("vi-VN")
                   : "-"}
               </Descriptions.Item>
+
+              {record.refundQrUrl &&
+                record.refundStatus?.toLowerCase() !== "completed" && (
+                  <Descriptions.Item label="Refund QR" span={2}>
+                    <img
+                      src={record.refundQrUrl}
+                      alt="Refund QR"
+                      style={{
+                        width: 220,
+                        height: "auto",
+                        border: "1px solid #eee",
+                      }}
+                    />
+                  </Descriptions.Item>
+                )}
             </Descriptions>
           )}
 

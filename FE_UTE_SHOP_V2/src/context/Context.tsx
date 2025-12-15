@@ -1,7 +1,7 @@
 "use client";
 import { openCartModal } from "@/utlis/openCartModal";
 import type { Product, ContextValue, ContextProps } from "@/types";
-import type { CartItem } from "@/types/cart";
+import type { CartItem, CartVariantOptionResponse } from "@/types/cart";
 import React, { useEffect, useContext, useState } from "react";
 import wishlistApi from "@/services/wishlistApi";
 import cartApi from "@/services/cartApi";
@@ -166,6 +166,68 @@ export default function Context({ children }: ContextProps) {
                   }
                 }
 
+                // ✅ Build variantOptions từ product colors và sizes
+                let variantOptions: CartVariantOptionResponse[] = [];
+                
+                // Nếu item đã có variantOptions (từ localStorage), normalize nó
+                if (item.variantOptions && item.variantOptions.length > 0) {
+                  variantOptions = item.variantOptions.map((opt: any) => {
+                    // Nếu có label (format từ VTON), parse thành color và size
+                    if (opt.label && !opt.color) {
+                      const parts = opt.label.split(" - ");
+                      const colorPart = parts[0]?.trim() || "";
+                      const sizePart = parts[1]?.trim() || null;
+                      const normalized = {
+                        variantId: opt.variantId || 0,
+                        color: colorPart || null,
+                        size: sizePart || null,
+                        price: opt.price || productData.basePrice || productData.price || item.price || 0,
+                        maxQuantity: opt.maxQuantity || productData.quantity || 999,
+                        imageUrl: opt.imageUrl || null,
+                      };
+                      return normalized;
+                    }
+                    // Nếu đã có color và size, giữ nguyên nhưng đảm bảo có đủ field
+                    const normalized = {
+                      variantId: opt.variantId || 0,
+                      color: opt.color || null,
+                      size: opt.size || null,
+                      price: opt.price || productData.basePrice || productData.price || item.price || 0,
+                      maxQuantity: opt.maxQuantity || productData.quantity || 999,
+                      imageUrl: opt.imageUrl || null,
+                    };
+                    return normalized;
+                  });
+                }
+                
+                // Nếu chưa có variantOptions, build từ product data
+                if (variantOptions.length === 0 && productData.colors && Array.isArray(productData.colors)) {
+                  productData.colors.forEach((color: any) => {
+                    if (color.sizes && Array.isArray(color.sizes)) {
+                      color.sizes.forEach((size: any) => {
+                        variantOptions.push({
+                          variantId: size.variantId || 0,
+                          color: color.label || null,
+                          size: size.size || null,
+                          price: productData.basePrice || productData.price || 0,
+                          maxQuantity: size.stockQuantity || 0,
+                          imageUrl: color.img || color.imageUrl || productData.imgSrc || null,
+                        });
+                      });
+                    } else {
+                      // Nếu không có sizes, vẫn thêm color option
+                      variantOptions.push({
+                        variantId: 0,
+                        color: color.label || null,
+                        size: null,
+                        price: productData.basePrice || productData.price || 0,
+                        maxQuantity: productData.quantity || 999,
+                        imageUrl: color.img || color.imageUrl || productData.imgSrc || null,
+                      });
+                    }
+                  });
+                }
+
                 return {
                   ...item,
                   productSlug:
@@ -174,7 +236,7 @@ export default function Context({ children }: ContextProps) {
                   productName: productData.title,
                   imgSrc,
                   maxQuantity: productData.quantity || 999,
-                  variantOptions: item.variantOptions || [],
+                  variantOptions: variantOptions,
                   size: item.size || null,
                 } as CartItem;
               } catch (error) {
@@ -268,6 +330,35 @@ export default function Context({ children }: ContextProps) {
             }
           }
 
+          // ✅ Build variantOptions từ product colors và sizes
+          const variantOptions: CartVariantOptionResponse[] = [];
+          if (productData.colors && Array.isArray(productData.colors)) {
+            productData.colors.forEach((colorItem: any) => {
+              if (colorItem.sizes && Array.isArray(colorItem.sizes)) {
+                colorItem.sizes.forEach((sizeItem: any) => {
+                  variantOptions.push({
+                    variantId: sizeItem.variantId || 0,
+                    color: colorItem.label || null,
+                    size: sizeItem.size || null,
+                    price: productData.basePrice || productData.price || 0,
+                    maxQuantity: sizeItem.stockQuantity || 0,
+                    imageUrl: colorItem.img || colorItem.imageUrl || productData.imgSrc || null,
+                  });
+                });
+              } else {
+                // Nếu không có sizes, vẫn thêm color option
+                variantOptions.push({
+                  variantId: 0,
+                  color: colorItem.label || null,
+                  size: null,
+                  price: productData.basePrice || productData.price || 0,
+                  maxQuantity: productData.quantity || 999,
+                  imageUrl: colorItem.img || colorItem.imageUrl || productData.imgSrc || null,
+                });
+              }
+            });
+          }
+
           setCartProducts((prev) => {
             const index = prev.findIndex(
               (i) =>
@@ -283,6 +374,10 @@ export default function Context({ children }: ContextProps) {
               newArr[index] = {
                 ...oldItem,
                 quantity: (oldItem.quantity || 0) + qty,
+                // ✅ Cập nhật variantOptions nếu chưa có
+                variantOptions: oldItem.variantOptions && oldItem.variantOptions.length > 0 
+                  ? oldItem.variantOptions 
+                  : variantOptions,
               };
               return newArr;
             }
@@ -301,7 +396,7 @@ export default function Context({ children }: ContextProps) {
               quantity: qty,
               price: productData.price,
               maxQuantity: productData.quantity || 999,
-              variantOptions: [],
+              variantOptions: variantOptions, // ✅ Dùng variantOptions đã build
             };
 
             return [...prev, newItem];

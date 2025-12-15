@@ -125,20 +125,6 @@ public class ProductService {
         );
     }
 
-    /**
-     * Hàm mới: lọc + sort theo filter từ FE
-     *
-     * @param page      số page (0-based)
-     * @param size      số item / page
-     * @param minPrice  giá tối thiểu (nullable)
-     * @param maxPrice  giá tối đa (nullable)
-     * @param brandIds  danh sách id brand (nullable)
-     * @param colors    danh sách màu (label, vd: "Trắng", "Đen") (nullable)
-     * @param sizes     danh sách size (vd: "L", "M", "40") (nullable)
-     * @param inStock   true = còn hàng, false = hết hàng, null = tất cả
-     * @param sortBy    trường sort: "price", "title", ... (nullable)
-     * @param sortDir   "asc" hoặc "desc" (nullable)
-     */
     @Transactional(readOnly = true)
     public Page<ProductCardResponse> getAllProductsFiltered(
             int page,
@@ -182,49 +168,74 @@ public class ProductService {
             spec = spec.and((root, query, cb) -> root.get("brandId").in(brandIds));
         }
 
-        // Categories (filter theo slug)
+        // Categories (filter theo slug) — include cả category con
         if (categories != null && !categories.isEmpty()) {
             spec = spec.and((root, query, cb) -> {
                 query.distinct(true);
-                // Join qua bảng trung gian ProductCategory
                 Join<Product, ProductCategory> pcJoin = root.join("productCategories", JoinType.INNER);
                 Join<ProductCategory, Category> categoryJoin = pcJoin.join("category", JoinType.INNER);
-                return categoryJoin.get("slug").in(categories);
-            });
-        }
-
-        // Lấy attribute names từ DB
-        List<String> colorAttrNames = attributeRepository.findByType("Color")
-                .stream().map(Attribute::getName).toList();
-        List<String> sizeAttrNames = attributeRepository.findByType("Size")
-                .stream().map(Attribute::getName).toList();
-
-        // Colors
-        if (colors != null && !colors.isEmpty() && !colorAttrNames.isEmpty()) {
-            spec = spec.and((root, query, cb) -> {
-                query.distinct(true);
-                Join<Product, ProductVariant> variantJoin = root.join("variants", JoinType.LEFT);
-                Join<ProductVariant, VariantAttributeValue> attrJoin = variantJoin.join("attributeValues", JoinType.LEFT);
-                Join<VariantAttributeValue, Attribute> attributeJoin = attrJoin.join("attribute", JoinType.LEFT);
-
-                return cb.and(
-                        attributeJoin.get("name").in(colorAttrNames),
-                        attrJoin.get("attributeValue").in(colors)
+                // Match slug hoặc slug của parent
+                return cb.or(
+                        categoryJoin.get("slug").in(categories),
+                        categoryJoin.get("parent").get("slug").in(categories)
                 );
             });
         }
 
-        // Sizes
+        // Lấy attribute names từ DB
+        List<String> colorAttrNames = attributeRepository.findByType("color")
+                .stream().map(Attribute::getName).toList();
+        List<String> sizeAttrNames = attributeRepository.findByType("size")
+                .stream().map(Attribute::getName).toList();
+
+        // ===================== COLORS =====================
+        if (colors != null && !colors.isEmpty() && !colorAttrNames.isEmpty()) {
+            spec = spec.and((root, query, cb) -> {
+                query.distinct(true);
+
+                Join<Product, ProductVariant> variantJoin =
+                        root.join("variants", JoinType.LEFT);
+
+                Join<ProductVariant, VariantAttributeValue> vavJoin =
+                        variantJoin.join("attributeValues", JoinType.LEFT);
+
+                Join<VariantAttributeValue, Attribute> attributeJoin =
+                        vavJoin.join("attribute", JoinType.LEFT);
+
+                // ⭐ join sang bảng AttributeValue để lấy field value/code (String)
+                Join<VariantAttributeValue, AttributeValue> avJoin =
+                        vavJoin.join("attributeValue", JoinType.LEFT);
+
+                // FE đang gửi "Đen", "Trắng", ... -> so sánh với cột value
+                return cb.and(
+                        attributeJoin.get("name").in(colorAttrNames),
+                        avJoin.get("value").in(colors)   // <--- so sánh String với String
+                        // nếu sau này FE gửi 'BLACK', 'WHITE' thì đổi sang avJoin.get("code").in(colors)
+                );
+            });
+        }
+
+        // ===================== SIZES =====================
         if (sizes != null && !sizes.isEmpty() && !sizeAttrNames.isEmpty()) {
             spec = spec.and((root, query, cb) -> {
                 query.distinct(true);
-                Join<Product, ProductVariant> variantJoin = root.join("variants", JoinType.LEFT);
-                Join<ProductVariant, VariantAttributeValue> attrJoin = variantJoin.join("attributeValues", JoinType.LEFT);
-                Join<VariantAttributeValue, Attribute> attributeJoin = attrJoin.join("attribute", JoinType.LEFT);
 
+                Join<Product, ProductVariant> variantJoin =
+                        root.join("variants", JoinType.LEFT);
+
+                Join<ProductVariant, VariantAttributeValue> vavJoin =
+                        variantJoin.join("attributeValues", JoinType.LEFT);
+
+                Join<VariantAttributeValue, Attribute> attributeJoin =
+                        vavJoin.join("attribute", JoinType.LEFT);
+
+                Join<VariantAttributeValue, AttributeValue> avJoin =
+                        vavJoin.join("attributeValue", JoinType.LEFT);
+
+                // FE gửi "S", "M", "L", "40"... -> so sánh với value
                 return cb.and(
                         attributeJoin.get("name").in(sizeAttrNames),
-                        attrJoin.get("attributeValue").in(sizes)
+                        avJoin.get("value").in(sizes)
                 );
             });
         }
@@ -233,8 +244,10 @@ public class ProductService {
         if (inStock != null) {
             spec = spec.and((root, query, cb) -> {
                 query.distinct(true);
-                Join<Product, ProductVariant> variantJoin = root.join("variants", JoinType.LEFT);
-                Join<ProductVariant, Stock> stockJoin = variantJoin.join("stocks", JoinType.LEFT);
+                Join<Product, ProductVariant> variantJoin =
+                        root.join("variants", JoinType.LEFT);
+                Join<ProductVariant, Stock> stockJoin =
+                        variantJoin.join("stocks", JoinType.LEFT);
 
                 if (inStock) {
                     return cb.greaterThan(stockJoin.get("quantity"), 0);
@@ -253,6 +266,7 @@ public class ProductService {
                 productPage.getTotalElements()
         );
     }
+
 
 
     // ---- private helper ----

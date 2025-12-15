@@ -11,6 +11,10 @@ export interface VirtualTryOnModalProps {
   isOpen: boolean;
   onClose: () => void;
   product: Product;
+  /** Cho phép thử đồ? (đã kiểm tra ở trang chi tiết) */
+  isSupported?: boolean;
+  /** Sản phẩm dạng "bộ"/set: cho phép chọn thử Áo hoặc Quần */
+  isSetProduct?: boolean;
 }
 
 type VariantForTryOn = {
@@ -24,12 +28,16 @@ export default function VirtualTryOnModal({
   isOpen,
   onClose,
   product,
+  isSupported = true,
+  isSetProduct = false,
 }: VirtualTryOnModalProps) {
   const [modelFile, setModelFile] = useState<File | null>(null);
   const [modelPreview, setModelPreview] = useState<string | null>(null);
   const [selectedVariant, setSelectedVariant] =
     useState<VariantForTryOn | null>(null);
   const [variants, setVariants] = useState<VariantForTryOn[]>([]);
+  const [selectedCategory, setSelectedCategory] =
+    useState<VariantForTryOn["category"]>("upper_body");
   const [history, setHistory] = useState<TryOnHistoryItem[]>([]);
   const [loadingTryOn, setLoadingTryOn] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -37,8 +45,14 @@ export default function VirtualTryOnModal({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Detect category + build variants (giống cũ)
+  // Detect category + build variants (giống cũ, nhưng cho phép chọn lại nếu là bộ)
   useEffect(() => {
+    if (!isSupported) {
+      setVariants([]);
+      setSelectedVariant(null);
+      return;
+    }
+
     console.log("🔥 [VTON] useEffect RUN, product =", product);
 
     if (!product) return;
@@ -84,6 +98,12 @@ export default function VirtualTryOnModal({
       console.log("⚠ Không detect được, DEFAULT = upper_body", name);
     }
 
+    if (isSetProduct) {
+      category = selectedCategory;
+    } else {
+      setSelectedCategory(category);
+    }
+
     const colors = (product as any).colors || [];
     const vs: VariantForTryOn[] = colors.flatMap((c: any) =>
       (c.sizes || []).map((s: any) => ({
@@ -100,7 +120,7 @@ export default function VirtualTryOnModal({
       setVariants(vs);
       setSelectedVariant(vs[0]);
     }
-  }, [product]);
+  }, [product, isSupported, isSetProduct, selectedCategory]);
 
   // Lấy lịch sử khi mở modal
   useEffect(() => {
@@ -313,6 +333,26 @@ export default function VirtualTryOnModal({
 
   if (!isOpen) return null;
 
+  if (!isSupported) {
+    return (
+      <div className={`modal fade modal-payos ${isOpen ? "show d-block" : ""}`} tabIndex={-1}>
+        <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">Thử đồ ảo</h5>
+              <button type="button" className="btn-close" onClick={onClose} />
+            </div>
+            <div className="modal-body">
+              <p className="mb-0">
+                Tính năng thử đồ ảo chỉ hỗ trợ trang phục (áo, quần, váy/đầm). Sản phẩm này thuộc phụ kiện nên không thể thử.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div
@@ -338,6 +378,36 @@ export default function VirtualTryOnModal({
 
             {/* BODY – layout 2 cột, dùng style Bootstrap cơ bản */}
             <div className="modal-body">
+              {/* Nếu là sản phẩm "bộ", cho chọn phần muốn thử */}
+              {isSetProduct && (
+                <div className="alert alert-info py-2 mb-3">
+                  <div className="fw-bold mb-2">Chọn phần muốn thử</div>
+                  <div className="d-flex gap-2">
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${
+                        selectedCategory === "upper_body"
+                          ? "btn-primary"
+                          : "btn-outline-primary"
+                      }`}
+                      onClick={() => setSelectedCategory("upper_body")}
+                    >
+                      Áo / Top
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${
+                        selectedCategory === "lower_body"
+                          ? "btn-primary"
+                          : "btn-outline-primary"
+                      }`}
+                      onClick={() => setSelectedCategory("lower_body")}
+                    >
+                      Quần / Bottom
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="row g-4">
                 {/* Cột trái: Upload ảnh người dùng */}
                 <div className="col-lg-6">

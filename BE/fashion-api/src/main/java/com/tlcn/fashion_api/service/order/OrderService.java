@@ -1,5 +1,7 @@
 package com.tlcn.fashion_api.service.order;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tlcn.fashion_api.common.enums.OrderStatus;
 import com.tlcn.fashion_api.dto.response.order.*;
 import com.tlcn.fashion_api.entity.address.Address;
@@ -31,12 +33,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
@@ -137,6 +140,29 @@ public class OrderService {
         // 👇 LẤY PAYMENT METHOD TỪ SNAPSHOT
         String paymentMethod = extractPaymentMethod(order);
 
+        // QR hoàn tiền (dựa vào bank code FE gửi)
+        String refundQrUrl = null;
+        if (refund != null
+                && refundAmount != null
+                && refundAmount.compareTo(BigDecimal.ZERO) > 0
+                && refund.getAccountNumber() != null
+                && refund.getBankName() != null
+                && (refundStatus == null || !"completed".equalsIgnoreCase(refundStatus))) {
+            String bankCode = resolveBankCodeForRefund(refund.getBankName());
+            if (bankCode != null) {
+                String amountStr = refundAmount.setScale(0, RoundingMode.DOWN).toPlainString();
+                String noteRaw = refundCode != null ? refundCode : order.getOrderCode();
+                String note = URLEncoder.encode(noteRaw, StandardCharsets.UTF_8);
+                refundQrUrl = String.format(
+                        "https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=%s",
+                        bankCode,
+                        refund.getAccountNumber(),
+                        amountStr,
+                        note
+                );
+            }
+        }
+
         return OrderDetailResponse.builder()
                 .orderId(order.getId())
                 .orderCode(order.getOrderCode())
@@ -161,6 +187,7 @@ public class OrderService {
                 .customerPhone(customerPhone)
 
                 .paymentMethod(paymentMethod) // 👈 THÊM DÒNG NÀY
+                .refundQrUrl(refundQrUrl)
 
                 .refundBankName(refundBankName)
                 .refundAccountNumber(refundAccountNumber)
@@ -573,5 +600,18 @@ public class OrderService {
             if (item.getProductId() == null || item.getQty() == null) continue;
             productRepository.increaseSoldCount(item.getProductId(), item.getQty());
         }
+    }
+
+    // Map mã ngân hàng theo giá trị FE gửi (MB, Vietcombank, Techcombank, Sacombank, TPBank, BIDV)
+    private String resolveBankCodeForRefund(String bankName) {
+        if (bankName == null) return null;
+        String n = bankName.trim().toLowerCase();
+        if (n.equals("mb") || n.contains("mb bank")) return "MBB";
+        if (n.equals("vietcombank") || n.contains("vcb")) return "VCB";
+        if (n.equals("techcombank") || n.contains("tcb")) return "TCB";
+        if (n.equals("sacombank") || n.contains("stb")) return "STB";
+        if (n.equals("tpbank") || n.contains("tpb")) return "TPB";
+        if (n.equals("bidv")) return "BIDV";
+        return null;
     }
 }

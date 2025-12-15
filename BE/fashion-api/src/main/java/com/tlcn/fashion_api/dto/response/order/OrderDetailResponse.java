@@ -49,4 +49,7 @@ public class OrderDetailResponse {
     private LocalDateTime refundRequestedAt;
 
     private String paymentMethod;
+
+    // QR hoàn tiền cho admin
+    private String refundQrUrl;
 }

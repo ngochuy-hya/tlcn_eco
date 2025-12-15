@@ -18,6 +18,7 @@ export default function ShopCart() {
     setCartProducts,
     // totalPrice,   // ❌ bỏ, ta tự tính
     updateQuantity,
+    changeCartItemVariant, // ✅ Thêm để xử lý cả Guest và Customer
   } = useContextElement();
 
   // ✅ Tự tính tổng tiền từ cartProducts (ưu tiên discountedPrice nếu có)
@@ -44,15 +45,7 @@ export default function ShopCart() {
     }
   };
 
-  // ⭐ ĐỔI VARIANT (color/size) ngay trong trang giỏ hàng
-  const handleChangeVariant = async (itemId: number, variantId: number) => {
-    try {
-      const res = await cartApi.changeItemVariant(itemId, variantId);
-      setCartProducts((res.data.items as CartItem[]) ?? []);
-    } catch (err) {
-      console.error("Failed to change variant:", err);
-    }
-  };
+  // ✅ ĐỔI VARIANT: Dùng context để xử lý cả Guest (localStorage) và Customer (API BE)
 
   return (
     <div className="flat-spacing-2 pt-0">
@@ -115,19 +108,21 @@ export default function ShopCart() {
                                   )}
                                 </div>
 
-                                {/* ⭐ Select đổi color/size */}
+                                {/* ⭐ Select đổi color/size - Hỗ trợ cả Guest và Customer */}
                                 {item.variantOptions &&
                                   item.variantOptions.length > 0 && (
                                     <div className="mb-1">
                                       <select
                                         className="form-select form-select-sm"
                                         value={item.variantId ?? undefined}
-                                        onChange={(e) =>
-                                          handleChangeVariant(
-                                            item.id, // cart item id
-                                            Number(e.target.value)
-                                          )
-                                        }
+                                        onChange={(e) => {
+                                          const selectedOption = item.variantOptions.find(
+                                            (opt) => opt.variantId === Number(e.target.value)
+                                          );
+                                          if (selectedOption) {
+                                            changeCartItemVariant(item.id, selectedOption);
+                                          }
+                                        }}
                                       >
                                         {item.variantOptions.map((opt) => (
                                           <option

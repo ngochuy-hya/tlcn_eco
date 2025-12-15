@@ -28,8 +28,6 @@ public class BannerMapper {
         dto.setImageSrc(banner.getImageUrl());
         dto.setHeading(banner.getTitle()); // Cho phép chứa <br/>
 
-        // --- Text mô tả mặc định ---
-        dto.setSubText("Discover the latest trends in fashion that speak your style.");
 
         return dto;
     }

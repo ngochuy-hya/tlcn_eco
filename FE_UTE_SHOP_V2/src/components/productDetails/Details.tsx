@@ -33,6 +33,58 @@ export default function Details1({ product }: DetailsProps) {
   const [quantity, setQuantity] = useState(1);
   const [showTryOn, setShowTryOn] = useState(false);
 
+  const nameLower = (
+    (product.title || (product as any).name || "") as string
+  ).toLowerCase();
+
+  // Chặn thử đồ với phụ kiện
+  const isAccessory = useMemo(() => {
+    const deny = [
+      "giày",
+      "giay",
+      "sandal",
+      "dép",
+      "dep",
+      "boot",
+      "sneaker",
+      "loafer",
+      "oxford",
+      "heel",
+      "pump",
+      "slipper",
+      "flip-flop",
+      "ring",
+      "nhẫn",
+      "bracelet",
+      "vòng",
+      "necklace",
+      "dây chuyền",
+      "earring",
+      "bông tai",
+      "trang sức",
+      "jewelry",
+      "jewellery",
+      "belt",
+      "thắt lưng",
+      "ví",
+      "balo",
+      "túi",
+      "bag",
+      "cap",
+      "hat",
+      "mũ",
+      "nón",
+      "kính",
+      "khăn",
+    ];
+    return deny.some((k) => nameLower.includes(k));
+  }, [nameLower]);
+
+  const isSetProduct = useMemo(() => {
+    const keywords = ["bộ", "set ", "set-"];
+    return keywords.some((k) => nameLower.includes(k));
+  }, [nameLower]);
+
   // ⭐ Map colors từ BE sang ProductColor đúng format
   const mappedColors: ProductColor[] = useMemo(() => {
     if (!product.colors || product.colors.length === 0) {
@@ -248,10 +300,22 @@ export default function Details1({ product }: DetailsProps) {
                   <button
                     type="button"
                     className="tf-btn btn-primary w-100 animate-btn mt-2"
-                    onClick={() => setShowTryOn(true)}
+                    disabled={isAccessory}
+                    onClick={() => {
+                      if (isAccessory) {
+                        alert("Thử đồ ảo chỉ áp dụng cho trang phục (áo, quần, váy/đầm).");
+                        return;
+                      }
+                      setShowTryOn(true);
+                    }}
                   >
                     Thử đồ ảo
                   </button>
+                  {isAccessory && (
+                    <div className="text-danger mt-1" style={{ fontSize: "13px" }}>
+                      Tính năng thử đồ ảo chỉ hỗ trợ trang phục (áo, quần, váy/đầm).
+                    </div>
+                  )}
 
                   <Link
                     to="/checkout"
@@ -305,6 +369,8 @@ export default function Details1({ product }: DetailsProps) {
         isOpen={showTryOn}
         onClose={() => setShowTryOn(false)}
         product={product}
+        isSupported={!isAccessory}
+        isSetProduct={isSetProduct}
       />
     </section>
   );

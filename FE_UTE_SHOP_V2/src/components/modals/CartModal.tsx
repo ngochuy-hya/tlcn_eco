@@ -98,7 +98,9 @@ export default function CartModal() {
                             </div>
 
                             {/* 🔽 Nếu có variantOptions -> dùng làm dropdown */}
-                            {item.variantOptions && item.variantOptions.length > 0 ? (
+                            {item.variantOptions && 
+                             Array.isArray(item.variantOptions) && 
+                             item.variantOptions.length > 0 ? (
                               <div className="mb-2">
                                 <div
                                   className="cart-variant-dropdown"

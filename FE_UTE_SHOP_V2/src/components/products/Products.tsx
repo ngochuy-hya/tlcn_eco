@@ -5,7 +5,7 @@ import GridProducts from "./GridProducts";
 import FilterModal from "./FilterModal";
 import LayoutHandler from "./LayoutHandler";
 import { useEffect, useReducer, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { initialState, reducer } from "@/reducer/filterReducer";
 
 import type { ProductsProps } from "@/types";
@@ -21,6 +21,7 @@ export default function Products({
 }: ProductsProps) {
   const [activeLayout, setActiveLayout] = useState(4);
   const [state, dispatch] = useReducer(reducer, initialState);
+  const navigate = useNavigate();
 
   // phân trang từ BE
   const [totalPages, setTotalPages] = useState(0);
@@ -116,6 +117,15 @@ export default function Products({
           ],
         });
       }
+
+      // Xóa category/brand trên URL
+      const params = new URLSearchParams(searchParams);
+      params.delete("category");
+      params.delete("brand");
+      navigate({
+        pathname: "/shop-default",
+        search: params.toString() ? `?${params.toString()}` : "",
+      });
     },
   };
 
@@ -207,8 +217,10 @@ export default function Products({
   };
 
   useEffect(() => {
+    if (!filters) return;
     fetchProducts();
   }, [
+    filters,
     currentPage,
     itemPerPage,
     price,
@@ -389,7 +401,21 @@ export default function Products({
 
                 <div id="applied-filters">
                   {categorySlug && (
-                    <span className="filter-tag">
+                    <span
+                      className="filter-tag"
+                      onClick={() => {
+                        const params = new URLSearchParams(searchParams);
+                        params.delete("category");
+                        navigate({
+                          pathname: "/shop-default",
+                          search: params.toString()
+                            ? `?${params.toString()}`
+                            : "",
+                        });
+                        dispatch({ type: "SET_CURRENT_PAGE", payload: 1 });
+                      }}
+                      style={{ cursor: "pointer" }}
+                    >
                       <span className="remove-tag icon-close"></span>
                       Danh mục: {categorySlug}
                     </span>

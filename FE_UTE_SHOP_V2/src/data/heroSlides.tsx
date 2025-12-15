@@ -1,32 +1,32 @@
-export const slides = [
-  {
-    bgType: "bg-type-1",
-    imageSrc: "/images/slider/fashion/slider-fashion-1.png",
-    width: 1920,
-    height: 939,
-    heading: "Style <br /> Redefined",
-    subText: "Discover the latest trends in fashion that speak your style.",
-    colClass: "col-lg-12 col-12 col-sm-6",
-  },
-  {
-    bgType: "bg-type-2",
-    imageSrc: "/images/slider/fashion/slider-fashion-2.png",
-    width: 944,
-    height: 939,
-    heading: "Elegance <br /> Redefined",
-    subText: "Discover timeless styles for every occasion.",
-    colClass: "col-lg-12 col-12 col-sm-6",
-  },
-  {
-    bgType: "bg-type-3",
-    imageSrc: "/images/slider/fashion/slider-fashion-3.png",
-    width: 1920,
-    height: 939,
-    heading: "Elevate Your <br /> Wardrobe",
-    subText: "Timeless pieces to refresh your look for every season.",
-    colClass: "col-lg-5 offset-lg-7 col-sm-6 offset-sm-6 col-12",
-  },
-];
+// export const slides = [
+//   {
+//     bgType: "bg-type-1",
+//     imageSrc: "/images/slider/fashion/slider-fashion-1.png",
+//     width: 1920,
+//     height: 939,
+//     heading: "Style <br /> Redefined",
+//     subText: "Discover the latest trends in fashion that speak your style.",
+//     colClass: "col-lg-12 col-12 col-sm-6",
+//   },
+//   {
+//     bgType: "bg-type-2",
+//     imageSrc: "/images/slider/fashion/slider-fashion-2.png",
+//     width: 944,
+//     height: 939,
+//     heading: "Elegance <br /> Redefined",
+//     subText: "Discover timeless styles for every occasion.",
+//     colClass: "col-lg-12 col-12 col-sm-6",
+//   },
+//   {
+//     bgType: "bg-type-3",
+//     imageSrc: "/images/slider/fashion/slider-fashion-3.png",
+//     width: 1920,
+//     height: 939,
+//     heading: "Elevate Your <br /> Wardrobe",
+//     subText: "Timeless pieces to refresh your look for every season.",
+//     colClass: "col-lg-5 offset-lg-7 col-sm-6 offset-sm-6 col-12",
+//   },
+// ];
 
 export const fashionSlides = [
   {

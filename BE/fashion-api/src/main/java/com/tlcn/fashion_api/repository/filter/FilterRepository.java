@@ -32,13 +32,21 @@ public interface FilterRepository extends JpaRepository<Product, Long> {
     List<Object[]> countAvailability();  // <-- đổi sang List<Object[]>
 
     // Các query dưới giữ nguyên
+    // Đếm sản phẩm của category root bao gồm cả con (tối đa 1 cấp con)
     @Query(value = """
-        SELECT c.id, c.name, c.slug, COUNT(DISTINCT pc.product_id) AS productCount
+        SELECT 
+            c.id,
+            c.name,
+            c.slug,
+            (
+                SELECT COUNT(DISTINCT p2.id)
+                FROM product_categories pc2
+                JOIN products p2 ON p2.id = pc2.product_id AND p2.status = 'active'
+                JOIN categories c2 ON c2.id = pc2.category_id
+                WHERE c2.id = c.id OR c2.parent_id = c.id
+            ) AS productCount
         FROM categories c
-        LEFT JOIN product_categories pc ON pc.category_id = c.id
-        LEFT JOIN products p ON p.id = pc.product_id AND p.status = 'active'
         WHERE c.parent_id IS NULL
-        GROUP BY c.id, c.name, c.slug
         ORDER BY c.sort_order
         """, nativeQuery = true)
     List<Object[]> findCategoryFilters();

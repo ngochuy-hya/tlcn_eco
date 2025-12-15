@@ -89,6 +89,12 @@ export interface OrderDetail {
   refundReason?: string | null;
   refundStatus?: string | null;
   refundRequestedAt?: string | null;
+
+  refundQrUrl?: string | null;
+
+  // PayOS (nếu có)
+  payosCheckoutUrl?: string | null;
+  payosQrUrl?: string | null;
 }
 
 export interface AdminUpdateOrderStatusRequest {
