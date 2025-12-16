@@ -19,4 +19,5 @@ public class OrderSummaryResponse {
     private LocalDateTime createdAt;
 
     private String paymentMethod;
+    private String cancelReason; // Lý do hủy đơn (nếu admin đã hủy)
 }

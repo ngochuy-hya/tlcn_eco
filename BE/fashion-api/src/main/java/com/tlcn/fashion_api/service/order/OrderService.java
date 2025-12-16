@@ -87,6 +87,7 @@ public class OrderService {
                 .grandTotal(o.getGrandTotal())
                 .createdAt(o.getCreatedAt())
                 .paymentMethod(extractPaymentMethod(o))
+                .cancelReason(o.getCancelReason()) // Thêm lý do hủy đơn
                 .build();
     }
 

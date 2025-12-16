@@ -75,7 +75,7 @@ public class PaymentWebhookController {
                 paymentRepository.save(payment);
 
                 order.setPaymentStatus("paid");
-                order.setStatus("processing");
+                // Giữ nguyên status = "pending" để admin phải Confirm thủ công
                 order.setUpdatedAt(LocalDateTime.now());
                 orderRepository.save(order);
 

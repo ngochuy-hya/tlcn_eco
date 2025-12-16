@@ -282,7 +282,9 @@ const handleRetryPay = async (order: OrderSummary) => {
   const openCancelModal = (order: OrderSummary) => {
     setOrderForCancel(order);
     setCancelError("");
-    setCancelReason("Tôi đổi ý");
+    // Nếu admin đã hủy đơn, dùng lý do của admin (không cho user chỉnh sửa)
+    // Nếu user tự hủy, dùng lý do mặc định
+    setCancelReason(order.cancelReason || "Tôi đổi ý");
     setBankName("MB");
     setAccountNumber("");
     setAccountHolder("");
@@ -298,8 +300,13 @@ const handleRetryPay = async (order: OrderSummary) => {
     setCancelSubmitting(true);
 
     try {
+      // Nếu admin đã hủy, dùng lý do của admin (không cho user chỉnh sửa)
+      const reasonToUse = needRefundInfo(order) 
+        ? (order.cancelReason || "Admin hủy đơn")
+        : (cancelReason || "Tôi đổi ý");
+
       const basePayload: CancelOrderRequest = {
-        reason: cancelReason || "Tôi đổi ý",
+        reason: reasonToUse,
       };
 
       let payload: CancelOrderRequest = basePayload;
@@ -476,8 +483,8 @@ const handleRetryPay = async (order: OrderSummary) => {
                               {needRefundInfo(order) && (
                                 <button
                                   type="button"
-                                  className="btn btn-sm btn-warning"
-                                  data-bs-toggle="modal"
+                                  className="btn btn-sm btn-warning mt-2"
+                                  data-bs-toggle="modal" 
                                   data-bs-target="#cancel_order"
                                   onClick={() => openCancelModal(order)}
                                 >
@@ -549,15 +556,27 @@ const handleRetryPay = async (order: OrderSummary) => {
             <form onSubmit={handleSubmitCancel}>
               {/* Lý do hủy */}
               <div className="mb-3">
-                <label className="form-label">Lý do hủy đơn</label>
-                <textarea
-                  className="form-control"
-                  rows={3}
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  placeholder="Nhập lý do hủy đơn"
-                  required
-                />
+                <label className="form-label">
+                  {needRefundInfo(orderForCancel) 
+                    ? "Lý do hủy đơn (Admin đã hủy)" 
+                    : "Lý do hủy đơn"}
+                </label>
+                {needRefundInfo(orderForCancel) ? (
+                  // Admin đã hủy: chỉ hiển thị lý do, không cho chỉnh sửa
+                  <div className="alert alert-warning py-2">
+                    <strong>Lý do admin hủy:</strong> {orderForCancel.cancelReason || "Admin hủy đơn"}
+                  </div>
+                ) : (
+                  // User tự hủy: cho nhập lý do
+                  <textarea
+                    className="form-control"
+                    rows={3}
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    placeholder="Nhập lý do hủy đơn"
+                    required
+                  />
+                )}
               </div>
 
               {/* Nếu đơn đã thanh toán → form ngân hàng với logo */}
@@ -674,7 +693,7 @@ const handleRetryPay = async (order: OrderSummary) => {
             </form>
           </>
         ) : (
-          <p>Hủy thành công</p>
+          <p>Đã gửi yêu cầu hủy thành công</p>
         )}
       </div>
     </div>

@@ -149,6 +149,7 @@ export interface OrderSummary {
 
   grandTotal: number;
   createdAt: string;
+  cancelReason?: string | null; // Lý do hủy đơn (nếu admin đã hủy)
 }
 
 // Dữ liệu phân trang list đơn

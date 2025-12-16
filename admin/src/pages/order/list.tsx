@@ -73,37 +73,39 @@ const renderPaymentMethod = (method?: string) => {
 // =========================
 
 // ✅ Confirm:
-// - Chỉ cho đơn PENDING
-// - Nếu paymentMethod = PAYOS → chỉ cho Confirm khi paymentStatus = "paid"
-// - Nếu COD → PENDING là được Confirm luôn
+// - COD: chỉ khi PENDING (chưa thanh toán)
+// - PayOS: chỉ khi PENDING và đã thanh toán (paid) - admin phải Confirm thủ công
 const canConfirm = (order: OrderSummary) => {
   if (!order.status) return false;
 
   const status = order.status.toUpperCase();
+  // Chỉ cho Confirm khi đơn đang PENDING
   if (status !== "PENDING") return false;
 
   const method = order.paymentMethod?.toUpperCase();
   const paymentStatus = order.paymentStatus?.toLowerCase();
 
+  // PayOS: phải thanh toán xong (paid) mới được Confirm
   if (method === "PAYOS") {
-    // Chuyển khoản → phải thanh toán xong mới Confirm
     return paymentStatus === "paid";
   }
 
-  // COD hoặc không rõ → cho Confirm nếu PENDING
-  return true;
+  // COD: PENDING và chưa thanh toán → được Confirm
+  return paymentStatus === "unpaid" || !paymentStatus;
 };
 
 // ✅ Processing:
-// - Chỉ khi đã CONFIRMED
+// - Cho cả COD và PayOS khi đã CONFIRMED
+// - COD: sau khi Confirm → CONFIRMED → Processing → PROCESSING
+// - PayOS: sau khi thanh toán → CONFIRMED → Processing → PROCESSING
 const canProcessing = (order: OrderSummary) => {
   if (!order.status) return false;
   const status = order.status.toUpperCase();
   return status === "CONFIRMED";
 };
 
-// ✅ Completed:
-// - Chỉ khi đang PROCESSING
+// ✅ Completed (Done):
+// - Chỉ khi đang PROCESSING (cả COD và PayOS)
 const canComplete = (order: OrderSummary) => {
   if (!order.status) return false;
   const status = order.status.toUpperCase();
@@ -111,10 +113,14 @@ const canComplete = (order: OrderSummary) => {
 };
 
 // ✅ Cancel:
-// - Chỉ cho hủy khi PENDING (không cho hủy khi đã CONFIRMED)
+// - Cho phép hủy khi PENDING (cả chưa thanh toán và đã thanh toán)
+// - Nếu đã thanh toán (paid) → sẽ yêu cầu thông tin hoàn tiền từ khách
+// - Không cho hủy khi đã CONFIRMED hoặc PROCESSING
 const canCancel = (order: OrderSummary) => {
   if (!order.status) return false;
+  
   const status = order.status.toUpperCase();
+  // Chỉ cho hủy khi PENDING (cả unpaid và paid đều được)
   return status === "PENDING";
 };
 

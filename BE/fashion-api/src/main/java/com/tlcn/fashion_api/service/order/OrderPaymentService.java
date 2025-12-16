@@ -121,7 +121,7 @@ public class OrderPaymentService {
                 inventoryService.consumeForOrder(order);
 
                 order.setPaymentStatus("paid");
-                order.setStatus("processing"); // hoặc "confirmed"
+                // Giữ nguyên status = "pending" để admin phải Confirm thủ công
                 order.setUpdatedAt(LocalDateTime.now());
                 orderRepository.save(order);
 
@@ -144,7 +144,7 @@ public class OrderPaymentService {
             inventoryService.consumeForOrder(order);
 
             order.setPaymentStatus("paid");
-            order.setStatus("processing");
+            // Giữ nguyên status = "pending" để admin phải Confirm thủ công
             order.setUpdatedAt(LocalDateTime.now());
             orderRepository.save(order);
 

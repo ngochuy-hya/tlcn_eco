@@ -7,7 +7,6 @@ export default function BlogsList() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-
   useEffect(() => {
     fetchBlogs(currentPage);
   }, [currentPage]);
@@ -34,11 +33,6 @@ export default function BlogsList() {
         setTotalPages(0);
       }
     } catch (error: any) {
-      console.error("Failed to fetch blogs:", error);
-      console.error("Error response:", error.response?.data);
-      console.error("Error response full:", JSON.stringify(error.response?.data, null, 2));
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
       setBlogs([]);
       setTotalPages(0);
     } finally {
