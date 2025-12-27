@@ -104,6 +104,8 @@ public class CheckoutService {
 
         if ("PAYOS".equalsIgnoreCase(req.getPaymentMethod())) {
             order.setPaymentExpiresAt(now.plusMinutes(10));
+        } else if ("COD".equalsIgnoreCase(req.getPaymentMethod())) {
+            order.setPaymentExpiresAt(now.plusMinutes(30)); // COD: 30 phút để admin xác nhận
         }
 
         order.setSnapshotJson(buildSnapshotJson(req));
